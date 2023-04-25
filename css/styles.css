@@ -1,0 +1,27 @@
+nav{
+  background-color: #240220;
+}
+
+nav a {
+  color: #fff
+}
+
+td form {
+  display: none !important ;
+}
+
+.formEditFlex{
+  display: flex !important ;
+}
+
+.formEditNone{
+  display: none !important ;
+}
+
+.select-status{
+  display: none;
+}
+
+.icon-table{
+  font-size: 1.5em;
+}

@@ -1,3 +1,6 @@
+const toastLiveExample = document.getElementById('toast');
+const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample);
+
 //GET
 const fetchTasks = async () => { 
   const response = await fetch('http://localhost:3333/tasks');
@@ -7,21 +10,27 @@ const fetchTasks = async () => {
 };
 
 //POST
-const addTasks = async (event) => { 
-  event.preventDefault();
-
-  const inputTask = document.querySelector('.input-task').value;
+const addTasks = async () => { 
+  const inputTask = document.querySelector('#input-task').value;
   const task = { title: inputTask };
 
   await fetch('http://localhost:3333/tasks', {
     method: 'post',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(task)
+  }).then((response) => {
+    if(response.ok){
+      fetchTasks()
+      loadTasks();
+      messageToast('create');
+      document.querySelector('#input-task').value = '';
+    } else {
+      messageToast('error');
+      console.log(error.statusText);
+    }
+  }).catch(() => {
+    console.log('error');
   });
-
-  inputTask.value = '';
-  loadTasks();
-  alert("Nova tarefa criada com sucesso!");
 }
 
 //PUT
@@ -31,18 +40,33 @@ const updateTask = async ({id, title, status}) => {
     method: 'put',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({title, status})
-  });
-  loadTasks();
-  alert("Task alterada com sucesso!");
+  }).then((response) => {
+    if(response.ok){
+      loadTasks();
+      messageToast('edit');
+    } else {
+      messageToast('error');
+    }
+  }).catch(()=> {
+    console.log('error');
+  })
+
 }
 
 //DELETE
 const deleteTask = async (id) => {
   await fetch(`http://localhost:3333/tasks/${id}`, {
     method: 'delete',
-  });
-  loadTasks();
-  alert("Tarefa excluída com sucesso!");
+  }).then((response) => {
+    if(response.ok){
+      loadTasks();
+      messageToast('delete');
+    } else {
+      messageToast('error');
+    }
+  }).catch(() => {
+    console.log('error');
+  })
 }
 
 
@@ -68,33 +92,42 @@ const createRow = (id, title, created_at, status) => {
 
   const pendenteSelected = status === 'pentente' ? 'selected' : '';
   const concluidoSelected = status === 'concluido' ? 'selected' : '';
-  const andamentoSelected = status === 'andamento' ? 'selected' : '';
+  const progressoSelected = status === 'progresso' ? 'selected' : '';
+
+  const statusColor = {
+    pendente: "text-bg-warning",
+    concluido: "text-bg-success",
+    progresso: "text-bg-primary",
+  }
 
   const row = `
     <tr id="row-${id}">
       <td>
         <p id="text-edit-${id}">${title}</p>
-        <form id="form-edit-${id}" onSubmit="onSubmit(${this})" class="form-edit">
-          <input value="${title}" id="input-edit-${id}"/>
-          <button type="button"  class="btn-action" onClick="onSubmit(${id},'${status}')">
-          <span class="material-symbols-outlined"> done </span>
-        </button>
+        <form id="form-edit-${id}" onSubmit="onSubmit(${id},'${status}')" class="row g-3 form-edit">
+          <div class="col-auto">
+            <input class="form-control form-control-sm" value="${title}" id="input-edit-${id}"/>
+          </div>
         </form>
       </td>
-      <td>${formatDate(created_at)}</td>
       <td>
-        <select onChange="editStatus(${id}, '${title}')" id="select-${id}">
+        <select class="form-control form-control-sm select-status" onChange="editStatus(${id}, '${title}')" id="select-${id}">
           <option value="pendente" ${pendenteSelected}>Pendente</option>
-          <option value="em-andamento" ${andamentoSelected}>Em andamento</option>
+          <option value="progresso" ${progressoSelected}>Progresso</option>
           <option value="concluido" ${concluidoSelected}>Concluído</option>
         </select>
+        <p class="badge ${statusColor[status]} text-capitalize fw-bold" id="tag-${id}">${status}</p>
       </td>
       <td>
-        <button type="button" class="btn-action" onClick="editTask(${id})">
-          <span class="material-symbols-outlined"> edit </span>
+        ${formatDate(created_at)}
+      </td>
+      
+      <td>
+        <button type="button" class="btn btn-primary btn-sm" onClick="editTask(${id})" title="Editar">
+          <span class="material-symbols-outlined icon-table"> edit </span>
         </button>
-        <button type="button"  class="btn-action" onClick="deleteTask(${id})">
-          <span class="material-symbols-outlined"> delete </span>
+        <button type="button"  class="btn btn-danger btn-sm" onClick="deleteTask(${id})" title="Excluir">
+          <span class="material-symbols-outlined icon-table"> delete </span>
         </button>
       </td>
     </tr>`;
@@ -104,7 +137,7 @@ const createRow = (id, title, created_at, status) => {
 
 // formatar data de criação
 const formatDate = (dateUTC) => {
-  const option = { dateStyle: 'long', timeStyle: 'short'}
+  const option = { dateStyle: 'short'}
   const date = new Date(dateUTC).toLocaleString('pt-br', option);
   return date;
 }
@@ -119,8 +152,11 @@ const editStatus = async (id, title) => {
 
 // ação botão editar
 const editTask = (id) => {
-  document.getElementById(`form-edit-${id}`).style.display = "flex";
-  document.getElementById(`text-edit-${id}`).style.display = "none";
+  document.getElementById(`form-edit-${id}`).classList.toggle('formEditFlex');
+  document.getElementById(`text-edit-${id}`).classList.toggle('formEditNone');
+
+  document.getElementById(`select-${id}`).classList.toggle('formEditFlex');
+  document.getElementById(`tag-${id}`).classList.toggle('formEditNone');
 }
 
 // ação botão de salvar
@@ -130,9 +166,33 @@ const onSubmit = async (id, status) => {
   const task = { id, title, status};
   await updateTask(task);
 
-  document.getElementById(`form-edit-${id}`).style.display = "none";
-  document.getElementById(`text-edit-${id}`).style.display = "block";
+  document.getElementById(`form-edit-${id}`).classList.toggle('formEditNone');
+  document.getElementById(`text-edit-${id}`).classList.toggle('formEditFlex');
+
+  document.getElementById(`select-${id}`).classList.toggle('formEditNone');
+  document.getElementById(`tag-${id}`).classList.toggle('formEditFlex');
 }
 
-document.querySelector('.add-form').addEventListener('submit', addTasks);
+// mensagem personalizada 
+const messageToast = (status) => {
+  const message = {
+    error: 'Ocorreu um erro inesperado!',
+    create: 'Nova tarefa criada com sucesso!',
+    delete: 'Tarefa excluída com sucesso!',
+    edit: 'Tarefa editada com sucesso!'
+  }
+
+  document.querySelector('#message-task').innerHTML = message[status];
+
+  if(status === 'error'){
+    document.querySelector('#toast').classList.remove('bg-success');
+    document.querySelector('#toast').classList.add('bg-danger');
+  } else {
+    document.querySelector('#toast').classList.add('bg-success');
+    document.querySelector('#toast').classList.remove('bg-danger');
+  }
+  toastBootstrap.show();
+}
+
+document.querySelector('#add-form').addEventListener('submit', addTasks);
 loadTasks();
