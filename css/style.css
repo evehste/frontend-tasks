@@ -69,6 +69,12 @@ td{
   font-weight: 600;
 }
 
+
+
+td form{
+  display: none;
+}
+
 tr:nth-child(even){
   background-color: #f5f5f5;
 }
@@ -107,5 +113,8 @@ select:hover{
 .btn-action:nth-child(2){
   background-color: rgb(239, 39, 39);
   margin-right: 5px;
-  
+}
+
+.form-edit button{
+  background-color: #4d970b !important;
 }
